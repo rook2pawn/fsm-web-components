@@ -14,8 +14,6 @@ class Component extends Nanocomponent {
   }
 
   createElement({ state, emit }) {
-    console.log(this.fsm);
-
     return html`<div class="fsm">
       <div class="currentState">currentState ${this.fsm && this.fsm.state}</div>
       <div class="states">

@@ -4,6 +4,8 @@ const html = require("nanohtml");
 const devtools = require("choo-devtools");
 
 const Toggle = require("./components/toggle");
+const Turnstile = require("./components/turnstile");
+
 const FSMRender = require("./components/fsmRender");
 
 module.exports = () => {
@@ -11,13 +13,29 @@ module.exports = () => {
   const toggle = new Toggle();
   const fsm_toggle = new FSMRender();
   fsm_toggle.fsm = toggle.fsm;
+
+  const turnstile = new Turnstile();
+  const fsm_turnstile = new FSMRender();
+  fsm_turnstile.fsm = turnstile.fsm;
+
   function mainView(state, emit) {
     if (state.logger) {
       console.log("mainView:state", state);
     }
     return html`<body>
-      <div style="display:flex;">
-        ${toggle.render({ state, emit })} ${fsm_toggle.render({ state, emit })}
+      <div style="display:flex;flex-direction:column; width:600px;">
+        <div
+          style="display:flex; justify-content:space-between; margin-bottom:20px;"
+        >
+          ${toggle.render({ state, emit })}
+          ${fsm_toggle.render({ state, emit })}
+        </div>
+        <div
+          style="display:flex; justify-content:space-between;margin-bottom:20px;"
+        >
+          ${turnstile.render({ state, emit })}
+          ${fsm_turnstile.render({ state, emit })}
+        </div>
       </div>
     </body>`;
   }
@@ -25,14 +43,11 @@ module.exports = () => {
   app.use((state) => {
     state.logger = false;
   });
-  app.use(require("./components/stoplight/setup"));
-  app.use(require("./components/toggle/setup"));
-
   app.route("/", mainView);
   app.mount("body");
 };
 
-},{"./components/fsmRender":2,"./components/stoplight/setup":3,"./components/toggle":4,"./components/toggle/setup":5,"choo":28,"choo-devtools":15,"nanohtml":46}],2:[function(require,module,exports){
+},{"./components/fsmRender":2,"./components/toggle":3,"./components/turnstile":4,"choo":27,"choo-devtools":14,"nanohtml":45}],2:[function(require,module,exports){
 const Nanocomponent = require("nanocomponent");
 const html = require("choo/html");
 const css = 0;
@@ -49,8 +64,6 @@ class Component extends Nanocomponent {
   }
 
   createElement({ state, emit }) {
-    console.log(this.fsm);
-
     return html`<div class="fsm">
       <div class="currentState">currentState ${this.fsm && this.fsm.state}</div>
       <div class="states">
@@ -79,26 +92,7 @@ class Component extends Nanocomponent {
 
 module.exports = exports = Component;
 
-},{"choo/html":27,"nanocomponent":42,"sheetify/insert":71}],3:[function(require,module,exports){
-//const items = require("./items");
-
-const store = (state, emitter) => {
-  /*
-  emitter.on("store:buy", (item) => {
-    state.status.money.cents = state.status.money.cents - items[item].cost;
-    switch (item) {
-      case "401k":
-        break;
-      default:
-        break;
-    }
-  });
-  */
-};
-
-exports = module.exports = store;
-
-},{}],4:[function(require,module,exports){
+},{"choo/html":26,"nanocomponent":41,"sheetify/insert":70}],3:[function(require,module,exports){
 const Nanocomponent = require("nanocomponent");
 const html = require("choo/html");
 const css = 0;
@@ -149,26 +143,85 @@ class Component extends Nanocomponent {
 
 module.exports = exports = Component;
 
-},{"choo/html":27,"nanocomponent":42,"nanostate":59,"sheetify/insert":71}],5:[function(require,module,exports){
-const setup = (state, emitter) => {
-  /*
-  state.toggle = false;
-  emitter.on("toggle", () => {
-    state.toggle = !state.toggle;
-    emitter.emit("render");
-  });
-  */
-};
+},{"choo/html":26,"nanocomponent":41,"nanostate":58,"sheetify/insert":70}],4:[function(require,module,exports){
+const Nanocomponent = require("nanocomponent");
+const html = require("choo/html");
+const css = 0;
+const nanostate = require("nanostate");
 
-exports = module.exports = setup;
+;((require('sheetify/insert')("") || true) && "_d41d8cd9");
 
-},{}],6:[function(require,module,exports){
+class Component extends Nanocomponent {
+  constructor() {
+    super();
+    this._loadedResolve;
+    this.loaded = new Promise((resolve, reject) => {
+      this._loadedResolve = resolve;
+    });
+    this.fsm = nanostate("locked", {
+      locked: { coin: "unlocked", push: "locked" },
+      unlocked: { coin: "unlocked", push: "locked" },
+    });
+    this.state = {
+      push: false,
+    };
+    this.emit;
+    this.fsm.on("locked", () => {
+      this.rerender();
+      this.emit("render");
+    });
+    this.fsm.on("unlocked", () => {
+      this.rerender();
+      this.emit("render");
+    });
+  }
+
+  createElement({ state, emit }) {
+    this.emit = emit;
+    return html`<div class="turnstile">
+      <h4>Turnstile</h4>
+      <input
+        type="button"
+        value="insert coin"
+        onclick=${() => {
+          this.fsm.emit("coin");
+        }}
+      />
+      <input
+        type="button"
+        value="push"
+        onclick=${() => {
+          this.state.push = true;
+          this.rerender();
+          setTimeout(() => {
+            this.state.push = false;
+            this.fsm.emit("push");
+          }, 2000);
+        }}
+      />
+      <div>${this.state.push ? "Pushing" : this.fsm.state}</div>
+    </div>`;
+  }
+
+  load(el) {
+    this.el = el;
+    this._loadedResolve();
+  }
+
+  update() {
+    return false;
+  }
+}
+
+module.exports = exports = Component;
+
+},{"choo/html":26,"nanocomponent":41,"nanostate":58,"sheetify/insert":70}],5:[function(require,module,exports){
 const lib = require("./lib");
 const app = require("./app");
 
 lib.DOMContentLoadedPromise.then(app);
 
-},{"./app":1,"./lib":7}],7:[function(require,module,exports){
+},{"./app":1,"./lib":6}],6:[function(require,module,exports){
 exports.DOMContentLoadedPromise = new Promise((resolve, reject) => {
   document.addEventListener(
     "DOMContentLoaded",
@@ -179,7 +232,7 @@ exports.DOMContentLoadedPromise = new Promise((resolve, reject) => {
   );
 });
 
-},{}],8:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -689,7 +742,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"object-assign":62,"util/":11}],9:[function(require,module,exports){
+},{"object-assign":61,"util/":10}],8:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -714,14 +767,14 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],11:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -1311,7 +1364,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":10,"_process":68,"inherits":9}],12:[function(require,module,exports){
+},{"./support/isBuffer":9,"_process":67,"inherits":8}],11:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -1465,9 +1518,9 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function (Buffer){
 /*!
  * The buffer module from node.js, for the browser.
@@ -3248,7 +3301,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"base64-js":12,"buffer":14,"ieee754":38}],15:[function(require,module,exports){
+},{"base64-js":11,"buffer":13,"ieee754":37}],14:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter
 
 var storage = require('./lib/storage')
@@ -3300,7 +3353,7 @@ function expose (opts) {
   }
 }
 
-},{"./lib/copy":16,"./lib/debug":17,"./lib/help":18,"./lib/log":19,"./lib/logger":20,"./lib/perf":21,"./lib/storage":22,"events":32,"wayfarer/get-all-routes":24}],16:[function(require,module,exports){
+},{"./lib/copy":15,"./lib/debug":16,"./lib/help":17,"./lib/log":18,"./lib/logger":19,"./lib/perf":20,"./lib/storage":21,"events":31,"wayfarer/get-all-routes":23}],15:[function(require,module,exports){
 var stateCopy = require('state-copy')
 var pluck = require('plucker')
 
@@ -3316,7 +3369,7 @@ function copy (state) {
   stateCopy(isStateString ? pluck.apply(this, arguments) : state)
 }
 
-},{"plucker":66,"state-copy":72}],17:[function(require,module,exports){
+},{"plucker":65,"state-copy":71}],16:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var onChange = require('object-change-callsite')
 var nanologger = require('nanologger')
@@ -3358,7 +3411,7 @@ function debug (state, emitter, app, localEmitter) {
   })
 }
 
-},{"assert":8,"nanologger":50,"object-change-callsite":63}],18:[function(require,module,exports){
+},{"assert":7,"nanologger":49,"object-change-callsite":62}],17:[function(require,module,exports){
 module.exports = help
 
 function help () {
@@ -3391,7 +3444,7 @@ function print (cmd, desc) {
 
 function noop () {}
 
-},{}],19:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var removeItems = require('remove-array-items')
 var scheduler = require('nanoscheduler')()
 var nanologger = require('nanologger')
@@ -3469,7 +3522,7 @@ function log (state, emitter, app, localEmitter) {
 
 function noop () {}
 
-},{"clone":30,"nanologger":50,"nanoscheduler":58,"remove-array-items":23}],20:[function(require,module,exports){
+},{"clone":29,"nanologger":49,"nanoscheduler":57,"remove-array-items":22}],19:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var nanologger = require('nanologger')
 var Hooks = require('choo-hooks')
@@ -3554,7 +3607,7 @@ function logger (state, emitter, opts) {
   }
 }
 
-},{"choo-hooks":25,"nanologger":50,"nanoscheduler":58}],21:[function(require,module,exports){
+},{"choo-hooks":24,"nanologger":49,"nanoscheduler":57}],20:[function(require,module,exports){
 var onPerformance = require('on-performance')
 
 var BAR = '█'
@@ -3695,7 +3748,7 @@ function getMedian (args) {
 // Do nothing.
 function noop () {}
 
-},{"on-performance":65}],22:[function(require,module,exports){
+},{"on-performance":64}],21:[function(require,module,exports){
 var pretty = require('prettier-bytes')
 
 module.exports = storage
@@ -3738,7 +3791,7 @@ function fmt (num) {
 
 function noop () {}
 
-},{"prettier-bytes":67}],23:[function(require,module,exports){
+},{"prettier-bytes":66}],22:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3769,7 +3822,7 @@ function removeItems (arr, startIdx, removeCount) {
 
 module.exports = removeItems;
 
-},{}],24:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var assert = require('assert')
 
@@ -3807,7 +3860,7 @@ function getAllRoutes (router) {
   return transform(tree)
 }
 
-},{"assert":40}],25:[function(require,module,exports){
+},{"assert":39}],24:[function(require,module,exports){
 var onPerformance = require('on-performance')
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
@@ -3936,7 +3989,7 @@ ChooHooks.prototype._emitLoaded = function () {
   })
 }
 
-},{"assert":8,"nanoscheduler":58,"on-performance":65}],26:[function(require,module,exports){
+},{"assert":7,"nanoscheduler":57,"on-performance":64}],25:[function(require,module,exports){
 var assert = require('assert')
 var LRU = require('nanolru')
 
@@ -3979,10 +4032,10 @@ function newCall (Cls) {
   return new (Cls.bind.apply(Cls, arguments)) // eslint-disable-line
 }
 
-},{"assert":40,"nanolru":51}],27:[function(require,module,exports){
+},{"assert":39,"nanolru":50}],26:[function(require,module,exports){
 module.exports = require('nanohtml')
 
-},{"nanohtml":46}],28:[function(require,module,exports){
+},{"nanohtml":45}],27:[function(require,module,exports){
 var scrollToAnchor = require('scroll-to-anchor')
 var documentReady = require('document-ready')
 var nanotiming = require('nanotiming')
@@ -4255,7 +4308,7 @@ Choo.prototype._setCache = function (state) {
   }
 }
 
-},{"./component/cache":26,"assert":40,"document-ready":31,"nanobus":41,"nanohref":43,"nanomorph":52,"nanoquery":55,"nanoraf":56,"nanorouter":57,"nanotiming":61,"scroll-to-anchor":70,"xtend":75}],29:[function(require,module,exports){
+},{"./component/cache":25,"assert":39,"document-ready":30,"nanobus":40,"nanohref":42,"nanomorph":51,"nanoquery":54,"nanoraf":55,"nanorouter":56,"nanotiming":60,"scroll-to-anchor":69,"xtend":74}],28:[function(require,module,exports){
 /* global DOMException */
 
 module.exports = clipboardCopy
@@ -4305,7 +4358,7 @@ function clipboardCopy (text) {
     : Promise.reject(new DOMException('The request is not allowed', 'NotAllowedError'))
 }
 
-},{}],30:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 (function (Buffer){
 var clone = (function() {
 'use strict';
@@ -4566,7 +4619,7 @@ if (typeof module === 'object' && module.exports) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":14}],31:[function(require,module,exports){
+},{"buffer":13}],30:[function(require,module,exports){
 'use strict'
 
 module.exports = ready
@@ -4585,7 +4638,7 @@ function ready (callback) {
   })
 }
 
-},{}],32:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5110,7 +5163,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],33:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = stringify
 stringify.default = stringify
 stringify.stable = deterministicStringify
@@ -5273,7 +5326,7 @@ function replaceGetterValues (replacer) {
   }
 }
 
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 (function (global){
 var topLevel = typeof global !== 'undefined' ? global :
     typeof window !== 'undefined' ? window : {}
@@ -5294,7 +5347,7 @@ if (typeof document !== 'undefined') {
 module.exports = doccy;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":13}],35:[function(require,module,exports){
+},{"min-document":12}],34:[function(require,module,exports){
 (function (global){
 var win;
 
@@ -5311,7 +5364,7 @@ if (typeof window !== "undefined") {
 module.exports = win;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],36:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -5332,7 +5385,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],37:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -5629,7 +5682,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":36}],38:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":35}],37:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -5715,7 +5768,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],39:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 var containers = []; // will store container HTMLElement references
 var styleElements = []; // will store {prepend: HTMLElement, append: HTMLElement}
 
@@ -5775,7 +5828,7 @@ function createStyleElement() {
 module.exports = insertCss;
 module.exports.insertCss = insertCss;
 
-},{}],40:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 assert.notEqual = notEqual
 assert.notOk = notOk
 assert.equal = equal
@@ -5799,7 +5852,7 @@ function assert (t, m) {
   if (!t) throw new Error(m || 'AssertionError')
 }
 
-},{}],41:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 var splice = require('remove-array-items')
 var nanotiming = require('nanotiming')
 var assert = require('assert')
@@ -5963,7 +6016,7 @@ Nanobus.prototype._emit = function (arr, eventName, data, uuid) {
   }
 }
 
-},{"assert":40,"nanotiming":61,"remove-array-items":69}],42:[function(require,module,exports){
+},{"assert":39,"nanotiming":60,"remove-array-items":68}],41:[function(require,module,exports){
 var document = require('global/document')
 var nanotiming = require('nanotiming')
 var morph = require('nanomorph')
@@ -6119,7 +6172,7 @@ Nanocomponent.prototype.update = function () {
   throw new Error('nanocomponent: update should be implemented!')
 }
 
-},{"assert":40,"global/document":34,"nanomorph":52,"nanotiming":61,"on-load":64}],43:[function(require,module,exports){
+},{"assert":39,"global/document":33,"nanomorph":51,"nanotiming":60,"on-load":63}],42:[function(require,module,exports){
 var assert = require('assert')
 
 var safeExternalLink = /(noopener|noreferrer) (noopener|noreferrer)/
@@ -6164,7 +6217,7 @@ function href (cb, root) {
   })
 }
 
-},{"assert":40}],44:[function(require,module,exports){
+},{"assert":39}],43:[function(require,module,exports){
 'use strict'
 
 var trailingNewlineRegex = /\n[\s]+$/
@@ -6298,7 +6351,7 @@ module.exports = function appendChild (el, childs) {
   }
 }
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 'use strict'
 
 module.exports = [
@@ -6308,17 +6361,17 @@ module.exports = [
   'readonly', 'required', 'reversed', 'selected'
 ]
 
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 module.exports = require('./dom')(document)
 
-},{"./dom":48}],47:[function(require,module,exports){
+},{"./dom":47}],46:[function(require,module,exports){
 'use strict'
 
 module.exports = [
   'indeterminate'
 ]
 
-},{}],48:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 'use strict'
 
 var hyperx = require('hyperx')
@@ -6436,7 +6489,7 @@ module.exports = function (document) {
   return exports
 }
 
-},{"./append-child":44,"./bool-props":45,"./direct-props":47,"./svg-tags":49,"hyperx":37}],49:[function(require,module,exports){
+},{"./append-child":43,"./bool-props":44,"./direct-props":46,"./svg-tags":48,"hyperx":36}],48:[function(require,module,exports){
 'use strict'
 
 module.exports = [
@@ -6456,7 +6509,7 @@ module.exports = [
   'tspan', 'use', 'view', 'vkern'
 ]
 
-},{}],50:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 var assert = require('assert')
 
 var emojis = {
@@ -6621,7 +6674,7 @@ function pad (str) {
   return str.length !== 2 ? 0 + str : str
 }
 
-},{"assert":8}],51:[function(require,module,exports){
+},{"assert":7}],50:[function(require,module,exports){
 module.exports = LRU
 
 function LRU (opts) {
@@ -6759,7 +6812,7 @@ LRU.prototype.evict = function () {
   this.remove(this.tail)
 }
 
-},{}],52:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 var assert = require('nanoassert')
 var morph = require('./lib/morph')
 
@@ -6924,7 +6977,7 @@ function same (a, b) {
   return false
 }
 
-},{"./lib/morph":54,"nanoassert":40}],53:[function(require,module,exports){
+},{"./lib/morph":53,"nanoassert":39}],52:[function(require,module,exports){
 module.exports = [
   // attribute events (can be set with attributes)
   'onclick',
@@ -6968,7 +7021,7 @@ module.exports = [
   'onfocusout'
 ]
 
-},{}],54:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 var events = require('./events')
 var eventsLength = events.length
 
@@ -7140,7 +7193,7 @@ function updateAttribute (newNode, oldNode, name) {
   }
 }
 
-},{"./events":53}],55:[function(require,module,exports){
+},{"./events":52}],54:[function(require,module,exports){
 var reg = /([^?=&]+)(=([^&]*))?/g
 var assert = require('assert')
 
@@ -7164,7 +7217,7 @@ function qs (url) {
   return obj
 }
 
-},{"assert":40}],56:[function(require,module,exports){
+},{"assert":39}],55:[function(require,module,exports){
 'use strict'
 
 var assert = require('assert')
@@ -7201,7 +7254,7 @@ function nanoraf (render, raf) {
   }
 }
 
-},{"assert":40}],57:[function(require,module,exports){
+},{"assert":39}],56:[function(require,module,exports){
 var assert = require('assert')
 var wayfarer = require('wayfarer')
 
@@ -7257,7 +7310,7 @@ function pathname (routename, isElectron) {
   return decodeURI(routename.replace(suffix, '').replace(normalize, '/'))
 }
 
-},{"assert":40,"wayfarer":73}],58:[function(require,module,exports){
+},{"assert":39,"wayfarer":72}],57:[function(require,module,exports){
 var assert = require('assert')
 
 var hasWindow = typeof window !== 'undefined'
@@ -7314,7 +7367,7 @@ NanoScheduler.prototype.setTimeout = function (cb) {
 
 module.exports = createScheduler
 
-},{"assert":40}],59:[function(require,module,exports){
+},{"assert":39}],58:[function(require,module,exports){
 var Nanobus = require('nanobus')
 var assert = require('assert')
 var Parallelstate = require('./parallel-state')
@@ -7382,7 +7435,7 @@ Nanostate.prototype._next = function (eventName) {
   return this.transitions[this.state][eventName]
 }
 
-},{"./parallel-state":60,"assert":40,"nanobus":41}],60:[function(require,module,exports){
+},{"./parallel-state":59,"assert":39,"nanobus":40}],59:[function(require,module,exports){
 var Nanobus = require('nanobus')
 var assert = require('assert')
 
@@ -7422,7 +7475,7 @@ Parallelstate.prototype.emit = function (eventName) {
   Nanobus.prototype.emit.call(this, eventName)
 }
 
-},{"assert":40,"nanobus":41}],61:[function(require,module,exports){
+},{"assert":39,"nanobus":40}],60:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
 
@@ -7472,7 +7525,7 @@ function noop (cb) {
   }
 }
 
-},{"assert":40,"nanoscheduler":58}],62:[function(require,module,exports){
+},{"assert":39,"nanoscheduler":57}],61:[function(require,module,exports){
 /*
 object-assign
 (c) Sindre Sorhus
@@ -7564,7 +7617,7 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],63:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 var assert = require('assert')
 
 module.exports = objectChangeCallsite
@@ -7601,7 +7654,7 @@ function strip (str) {
   return '\n' + arr.join('\n')
 }
 
-},{"assert":8}],64:[function(require,module,exports){
+},{"assert":7}],63:[function(require,module,exports){
 /* global MutationObserver */
 var document = require('global/document')
 var window = require('global/window')
@@ -7705,7 +7758,7 @@ function eachMutation (nodes, fn) {
   }
 }
 
-},{"assert":40,"global/document":34,"global/window":35}],65:[function(require,module,exports){
+},{"assert":39,"global/document":33,"global/window":34}],64:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
 
@@ -7765,7 +7818,7 @@ function onPerformance (cb) {
   }
 }
 
-},{"assert":40,"nanoscheduler":58}],66:[function(require,module,exports){
+},{"assert":39,"nanoscheduler":57}],65:[function(require,module,exports){
 module.exports = plucker
 
 function plucker(path, object) {
@@ -7802,7 +7855,7 @@ function pluck(path) {
   }
 }
 
-},{}],67:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 module.exports = prettierBytes
 
 function prettierBytes (num) {
@@ -7834,7 +7887,7 @@ function prettierBytes (num) {
   }
 }
 
-},{}],68:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -8020,7 +8073,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],69:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 'use strict'
 
 /**
@@ -8049,7 +8102,7 @@ module.exports = function removeItems (arr, startIdx, removeCount) {
   arr.length = len
 }
 
-},{}],70:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 module.exports = scrollToAnchor
 
 function scrollToAnchor (anchor, options) {
@@ -8061,10 +8114,10 @@ function scrollToAnchor (anchor, options) {
   }
 }
 
-},{}],71:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 module.exports = require('insert-css')
 
-},{"insert-css":39}],72:[function(require,module,exports){
+},{"insert-css":38}],71:[function(require,module,exports){
 var fastSafeStringify = require('fast-safe-stringify')
 var copy = require('clipboard-copy')
 
@@ -8081,7 +8134,7 @@ function stateCopy (obj) {
 
 module.exports = stateCopy
 
-},{"clipboard-copy":29,"fast-safe-stringify":33}],73:[function(require,module,exports){
+},{"clipboard-copy":28,"fast-safe-stringify":32}],72:[function(require,module,exports){
 var assert = require('assert')
 var trie = require('./trie')
 
@@ -8160,7 +8213,7 @@ function Wayfarer (dft) {
   }
 }
 
-},{"./trie":74,"assert":8}],74:[function(require,module,exports){
+},{"./trie":73,"assert":7}],73:[function(require,module,exports){
 var mutate = require('xtend/mutable')
 var assert = require('assert')
 var xtend = require('xtend')
@@ -8298,7 +8351,7 @@ Trie.prototype.mount = function (route, trie) {
   }
 }
 
-},{"assert":8,"xtend":75,"xtend/mutable":76}],75:[function(require,module,exports){
+},{"assert":7,"xtend":74,"xtend/mutable":75}],74:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -8319,7 +8372,7 @@ function extend() {
     return target
 }
 
-},{}],76:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -8338,4 +8391,4 @@ function extend(target) {
     return target
 }
 
-},{}]},{},[6]);
+},{}]},{},[5]);
