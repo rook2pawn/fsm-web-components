@@ -3,17 +3,22 @@ const choo = require("choo");
 const html = require("nanohtml");
 const devtools = require("choo-devtools");
 
-const Stoplight = require("./components/stoplight");
+const Toggle = require("./components/toggle");
+const FSMRender = require("./components/fsmRender");
 
 module.exports = () => {
   const app = choo();
-  const stoplight = new Stoplight();
+  const toggle = new Toggle();
+  const fsm_toggle = new FSMRender();
+  fsm_toggle.fsm = toggle.fsm;
   function mainView(state, emit) {
     if (state.logger) {
       console.log("mainView:state", state);
     }
     return html`<body>
-      ${stoplight.render({ state, emit })}
+      <div style="display:flex;">
+        ${toggle.render({ state, emit })} ${fsm_toggle.render({ state, emit })}
+      </div>
     </body>`;
   }
   app.use(devtools());
@@ -21,15 +26,17 @@ module.exports = () => {
     state.logger = false;
   });
   app.use(require("./components/stoplight/setup"));
+  app.use(require("./components/toggle/setup"));
+
   app.route("/", mainView);
   app.mount("body");
 };
 
-},{"./components/stoplight":2,"./components/stoplight/setup":3,"choo":26,"choo-devtools":13,"nanohtml":44}],2:[function(require,module,exports){
+},{"./components/fsmRender":2,"./components/stoplight/setup":3,"./components/toggle":4,"./components/toggle/setup":5,"choo":28,"choo-devtools":15,"nanohtml":46}],2:[function(require,module,exports){
 const Nanocomponent = require("nanocomponent");
 const html = require("choo/html");
 const css = 0;
-;((require('sheetify/insert')("") || true) && "_d41d8cd9");
+;((require('sheetify/insert')("div.fsm {\n  border: thin solid black;\n  padding: 20px;\n}\ndiv.fsm div.currentState {\n  margin-bottom: 10px;\n  border-bottom: thin dotted #ccc;\n}\ndiv.fsm div.states span.active {\n  background-color: pink;\n}") || true) && "_148c46b7");
 
 class Component extends Nanocomponent {
   constructor() {
@@ -38,10 +45,26 @@ class Component extends Nanocomponent {
     this.loaded = new Promise((resolve, reject) => {
       this._loadedResolve = resolve;
     });
+    this.fsm;
   }
 
   createElement({ state, emit }) {
-    return html`<div class="">Card</div>`;
+    console.log(this.fsm);
+
+    return html`<div class="fsm">
+      <div class="currentState">currentState ${this.fsm && this.fsm.state}</div>
+      <div class="states">
+        ${Object.keys(this.fsm.transitions).map((key) => {
+          return html`<div>
+            <span class="key ${key === this.fsm.state ? "active" : ""}"
+              >${key}</span
+            ><span class="value"
+              >${JSON.stringify(this.fsm.transitions[key])}</span
+            >
+          </div>`;
+        })}
+      </div>
+    </div>`;
   }
 
   load(el) {
@@ -50,13 +73,13 @@ class Component extends Nanocomponent {
   }
 
   update() {
-    return false;
+    return true;
   }
 }
 
 module.exports = exports = Component;
 
-},{"choo/html":25,"nanocomponent":40,"sheetify/insert":67}],3:[function(require,module,exports){
+},{"choo/html":27,"nanocomponent":42,"sheetify/insert":71}],3:[function(require,module,exports){
 //const items = require("./items");
 
 const store = (state, emitter) => {
@@ -76,12 +99,76 @@ const store = (state, emitter) => {
 exports = module.exports = store;
 
 },{}],4:[function(require,module,exports){
+const Nanocomponent = require("nanocomponent");
+const html = require("choo/html");
+const css = 0;
+const nanostate = require("nanostate");
+
+;((require('sheetify/insert')("div.toggle {\n  height: 30px;\n  border: none;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}\ndiv.toggle:hover .slider {\n  background-color: #efefef;\n}\ndiv.toggle .toggleLine.toggle .slider {\n  left: calc(100% - 20px);\n  background-color: #3c3c3c;\n}\ndiv.toggle .toggleLine {\n  position: relative;\n  border-radius: 7px;\n  background-color: #ccc;\n  width: 100%;\n  cursor: pointer;\n  height: 14px;\n}\n\ndiv.toggle .slider {\n  transition: left 0.45s ease-in-out, background-color 0.45s ease-out;\n  position: absolute;\n  top: -4px;\n  left: 0;\n  box-sizing: border-box;\n  width: 20px;\n  height: 20px;\n  border-radius: 50%;\n  background-color: #fff;\n  box-shadow: 0 1px 1.5px 0 rgba(0, 0, 0, 0.12), 0 1px 1px 0 rgba(0, 0, 0, 0.24);\n}") || true) && "_32de57d5");
+
+class Component extends Nanocomponent {
+  constructor() {
+    super();
+    this.state = {
+      toggle: false,
+    };
+    this.fsm = nanostate("off", {
+      on: { switch: "off" },
+      off: { switch: "on" },
+    });
+    this.fsm.on("on", () => {
+      this.state.toggle = true;
+      this.rerender();
+      this.emit("render");
+    });
+    this.fsm.on("off", () => {
+      this.state.toggle = false;
+      this.rerender();
+      this.emit("render");
+    });
+  }
+  createElement({ emit }) {
+    this.emit = emit;
+    return html` <div
+      class="toggle"
+      style="width:120px;"
+      onclick=${() => {
+        this.fsm.emit("switch");
+      }}
+    >
+      <div class="toggleLine ${this.state.toggle ? "toggle" : ""}">
+        <div class="slider"></div>
+      </div>
+    </div>`;
+  }
+
+  update() {
+    return false;
+  }
+}
+
+module.exports = exports = Component;
+
+},{"choo/html":27,"nanocomponent":42,"nanostate":59,"sheetify/insert":71}],5:[function(require,module,exports){
+const setup = (state, emitter) => {
+  /*
+  state.toggle = false;
+  emitter.on("toggle", () => {
+    state.toggle = !state.toggle;
+    emitter.emit("render");
+  });
+  */
+};
+
+exports = module.exports = setup;
+
+},{}],6:[function(require,module,exports){
 const lib = require("./lib");
 const app = require("./app");
 
 lib.DOMContentLoadedPromise.then(app);
 
-},{"./app":1,"./lib":5}],5:[function(require,module,exports){
+},{"./app":1,"./lib":7}],7:[function(require,module,exports){
 exports.DOMContentLoadedPromise = new Promise((resolve, reject) => {
   document.addEventListener(
     "DOMContentLoaded",
@@ -92,7 +179,7 @@ exports.DOMContentLoadedPromise = new Promise((resolve, reject) => {
   );
 });
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -602,7 +689,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"object-assign":58,"util/":9}],7:[function(require,module,exports){
+},{"object-assign":62,"util/":11}],9:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -627,14 +714,14 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -1224,7 +1311,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":8,"_process":64,"inherits":7}],10:[function(require,module,exports){
+},{"./support/isBuffer":10,"_process":68,"inherits":9}],12:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -1378,9 +1465,9 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 (function (Buffer){
 /*!
  * The buffer module from node.js, for the browser.
@@ -3161,7 +3248,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"base64-js":10,"buffer":12,"ieee754":36}],13:[function(require,module,exports){
+},{"base64-js":12,"buffer":14,"ieee754":38}],15:[function(require,module,exports){
 var EventEmitter = require('events').EventEmitter
 
 var storage = require('./lib/storage')
@@ -3213,7 +3300,7 @@ function expose (opts) {
   }
 }
 
-},{"./lib/copy":14,"./lib/debug":15,"./lib/help":16,"./lib/log":17,"./lib/logger":18,"./lib/perf":19,"./lib/storage":20,"events":30,"wayfarer/get-all-routes":22}],14:[function(require,module,exports){
+},{"./lib/copy":16,"./lib/debug":17,"./lib/help":18,"./lib/log":19,"./lib/logger":20,"./lib/perf":21,"./lib/storage":22,"events":32,"wayfarer/get-all-routes":24}],16:[function(require,module,exports){
 var stateCopy = require('state-copy')
 var pluck = require('plucker')
 
@@ -3229,7 +3316,7 @@ function copy (state) {
   stateCopy(isStateString ? pluck.apply(this, arguments) : state)
 }
 
-},{"plucker":62,"state-copy":68}],15:[function(require,module,exports){
+},{"plucker":66,"state-copy":72}],17:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var onChange = require('object-change-callsite')
 var nanologger = require('nanologger')
@@ -3271,7 +3358,7 @@ function debug (state, emitter, app, localEmitter) {
   })
 }
 
-},{"assert":6,"nanologger":48,"object-change-callsite":59}],16:[function(require,module,exports){
+},{"assert":8,"nanologger":50,"object-change-callsite":63}],18:[function(require,module,exports){
 module.exports = help
 
 function help () {
@@ -3304,7 +3391,7 @@ function print (cmd, desc) {
 
 function noop () {}
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var removeItems = require('remove-array-items')
 var scheduler = require('nanoscheduler')()
 var nanologger = require('nanologger')
@@ -3382,7 +3469,7 @@ function log (state, emitter, app, localEmitter) {
 
 function noop () {}
 
-},{"clone":28,"nanologger":48,"nanoscheduler":56,"remove-array-items":21}],18:[function(require,module,exports){
+},{"clone":30,"nanologger":50,"nanoscheduler":58,"remove-array-items":23}],20:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var nanologger = require('nanologger')
 var Hooks = require('choo-hooks')
@@ -3467,7 +3554,7 @@ function logger (state, emitter, opts) {
   }
 }
 
-},{"choo-hooks":23,"nanologger":48,"nanoscheduler":56}],19:[function(require,module,exports){
+},{"choo-hooks":25,"nanologger":50,"nanoscheduler":58}],21:[function(require,module,exports){
 var onPerformance = require('on-performance')
 
 var BAR = '█'
@@ -3608,7 +3695,7 @@ function getMedian (args) {
 // Do nothing.
 function noop () {}
 
-},{"on-performance":61}],20:[function(require,module,exports){
+},{"on-performance":65}],22:[function(require,module,exports){
 var pretty = require('prettier-bytes')
 
 module.exports = storage
@@ -3651,7 +3738,7 @@ function fmt (num) {
 
 function noop () {}
 
-},{"prettier-bytes":63}],21:[function(require,module,exports){
+},{"prettier-bytes":67}],23:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3682,7 +3769,7 @@ function removeItems (arr, startIdx, removeCount) {
 
 module.exports = removeItems;
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var assert = require('assert')
 
@@ -3720,7 +3807,7 @@ function getAllRoutes (router) {
   return transform(tree)
 }
 
-},{"assert":38}],23:[function(require,module,exports){
+},{"assert":40}],25:[function(require,module,exports){
 var onPerformance = require('on-performance')
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
@@ -3849,7 +3936,7 @@ ChooHooks.prototype._emitLoaded = function () {
   })
 }
 
-},{"assert":6,"nanoscheduler":56,"on-performance":61}],24:[function(require,module,exports){
+},{"assert":8,"nanoscheduler":58,"on-performance":65}],26:[function(require,module,exports){
 var assert = require('assert')
 var LRU = require('nanolru')
 
@@ -3892,10 +3979,10 @@ function newCall (Cls) {
   return new (Cls.bind.apply(Cls, arguments)) // eslint-disable-line
 }
 
-},{"assert":38,"nanolru":49}],25:[function(require,module,exports){
+},{"assert":40,"nanolru":51}],27:[function(require,module,exports){
 module.exports = require('nanohtml')
 
-},{"nanohtml":44}],26:[function(require,module,exports){
+},{"nanohtml":46}],28:[function(require,module,exports){
 var scrollToAnchor = require('scroll-to-anchor')
 var documentReady = require('document-ready')
 var nanotiming = require('nanotiming')
@@ -4168,7 +4255,7 @@ Choo.prototype._setCache = function (state) {
   }
 }
 
-},{"./component/cache":24,"assert":38,"document-ready":29,"nanobus":39,"nanohref":41,"nanomorph":50,"nanoquery":53,"nanoraf":54,"nanorouter":55,"nanotiming":57,"scroll-to-anchor":66,"xtend":71}],27:[function(require,module,exports){
+},{"./component/cache":26,"assert":40,"document-ready":31,"nanobus":41,"nanohref":43,"nanomorph":52,"nanoquery":55,"nanoraf":56,"nanorouter":57,"nanotiming":61,"scroll-to-anchor":70,"xtend":75}],29:[function(require,module,exports){
 /* global DOMException */
 
 module.exports = clipboardCopy
@@ -4218,7 +4305,7 @@ function clipboardCopy (text) {
     : Promise.reject(new DOMException('The request is not allowed', 'NotAllowedError'))
 }
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 (function (Buffer){
 var clone = (function() {
 'use strict';
@@ -4479,7 +4566,7 @@ if (typeof module === 'object' && module.exports) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":12}],29:[function(require,module,exports){
+},{"buffer":14}],31:[function(require,module,exports){
 'use strict'
 
 module.exports = ready
@@ -4498,7 +4585,7 @@ function ready (callback) {
   })
 }
 
-},{}],30:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -5023,7 +5110,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],31:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 module.exports = stringify
 stringify.default = stringify
 stringify.stable = deterministicStringify
@@ -5186,7 +5273,7 @@ function replaceGetterValues (replacer) {
   }
 }
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 (function (global){
 var topLevel = typeof global !== 'undefined' ? global :
     typeof window !== 'undefined' ? window : {}
@@ -5207,7 +5294,7 @@ if (typeof document !== 'undefined') {
 module.exports = doccy;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":11}],33:[function(require,module,exports){
+},{"min-document":13}],35:[function(require,module,exports){
 (function (global){
 var win;
 
@@ -5224,7 +5311,7 @@ if (typeof window !== "undefined") {
 module.exports = win;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -5245,7 +5332,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],35:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -5542,7 +5629,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":34}],36:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":36}],38:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -5628,7 +5715,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],37:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var containers = []; // will store container HTMLElement references
 var styleElements = []; // will store {prepend: HTMLElement, append: HTMLElement}
 
@@ -5688,7 +5775,7 @@ function createStyleElement() {
 module.exports = insertCss;
 module.exports.insertCss = insertCss;
 
-},{}],38:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 assert.notEqual = notEqual
 assert.notOk = notOk
 assert.equal = equal
@@ -5712,7 +5799,7 @@ function assert (t, m) {
   if (!t) throw new Error(m || 'AssertionError')
 }
 
-},{}],39:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var splice = require('remove-array-items')
 var nanotiming = require('nanotiming')
 var assert = require('assert')
@@ -5876,7 +5963,7 @@ Nanobus.prototype._emit = function (arr, eventName, data, uuid) {
   }
 }
 
-},{"assert":38,"nanotiming":57,"remove-array-items":65}],40:[function(require,module,exports){
+},{"assert":40,"nanotiming":61,"remove-array-items":69}],42:[function(require,module,exports){
 var document = require('global/document')
 var nanotiming = require('nanotiming')
 var morph = require('nanomorph')
@@ -6032,7 +6119,7 @@ Nanocomponent.prototype.update = function () {
   throw new Error('nanocomponent: update should be implemented!')
 }
 
-},{"assert":38,"global/document":32,"nanomorph":50,"nanotiming":57,"on-load":60}],41:[function(require,module,exports){
+},{"assert":40,"global/document":34,"nanomorph":52,"nanotiming":61,"on-load":64}],43:[function(require,module,exports){
 var assert = require('assert')
 
 var safeExternalLink = /(noopener|noreferrer) (noopener|noreferrer)/
@@ -6077,7 +6164,7 @@ function href (cb, root) {
   })
 }
 
-},{"assert":38}],42:[function(require,module,exports){
+},{"assert":40}],44:[function(require,module,exports){
 'use strict'
 
 var trailingNewlineRegex = /\n[\s]+$/
@@ -6211,7 +6298,7 @@ module.exports = function appendChild (el, childs) {
   }
 }
 
-},{}],43:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 'use strict'
 
 module.exports = [
@@ -6221,17 +6308,17 @@ module.exports = [
   'readonly', 'required', 'reversed', 'selected'
 ]
 
-},{}],44:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 module.exports = require('./dom')(document)
 
-},{"./dom":46}],45:[function(require,module,exports){
+},{"./dom":48}],47:[function(require,module,exports){
 'use strict'
 
 module.exports = [
   'indeterminate'
 ]
 
-},{}],46:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 'use strict'
 
 var hyperx = require('hyperx')
@@ -6349,7 +6436,7 @@ module.exports = function (document) {
   return exports
 }
 
-},{"./append-child":42,"./bool-props":43,"./direct-props":45,"./svg-tags":47,"hyperx":35}],47:[function(require,module,exports){
+},{"./append-child":44,"./bool-props":45,"./direct-props":47,"./svg-tags":49,"hyperx":37}],49:[function(require,module,exports){
 'use strict'
 
 module.exports = [
@@ -6369,7 +6456,7 @@ module.exports = [
   'tspan', 'use', 'view', 'vkern'
 ]
 
-},{}],48:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 var assert = require('assert')
 
 var emojis = {
@@ -6534,7 +6621,7 @@ function pad (str) {
   return str.length !== 2 ? 0 + str : str
 }
 
-},{"assert":6}],49:[function(require,module,exports){
+},{"assert":8}],51:[function(require,module,exports){
 module.exports = LRU
 
 function LRU (opts) {
@@ -6672,7 +6759,7 @@ LRU.prototype.evict = function () {
   this.remove(this.tail)
 }
 
-},{}],50:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 var assert = require('nanoassert')
 var morph = require('./lib/morph')
 
@@ -6837,7 +6924,7 @@ function same (a, b) {
   return false
 }
 
-},{"./lib/morph":52,"nanoassert":38}],51:[function(require,module,exports){
+},{"./lib/morph":54,"nanoassert":40}],53:[function(require,module,exports){
 module.exports = [
   // attribute events (can be set with attributes)
   'onclick',
@@ -6881,7 +6968,7 @@ module.exports = [
   'onfocusout'
 ]
 
-},{}],52:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var events = require('./events')
 var eventsLength = events.length
 
@@ -7053,7 +7140,7 @@ function updateAttribute (newNode, oldNode, name) {
   }
 }
 
-},{"./events":51}],53:[function(require,module,exports){
+},{"./events":53}],55:[function(require,module,exports){
 var reg = /([^?=&]+)(=([^&]*))?/g
 var assert = require('assert')
 
@@ -7077,7 +7164,7 @@ function qs (url) {
   return obj
 }
 
-},{"assert":38}],54:[function(require,module,exports){
+},{"assert":40}],56:[function(require,module,exports){
 'use strict'
 
 var assert = require('assert')
@@ -7114,7 +7201,7 @@ function nanoraf (render, raf) {
   }
 }
 
-},{"assert":38}],55:[function(require,module,exports){
+},{"assert":40}],57:[function(require,module,exports){
 var assert = require('assert')
 var wayfarer = require('wayfarer')
 
@@ -7170,7 +7257,7 @@ function pathname (routename, isElectron) {
   return decodeURI(routename.replace(suffix, '').replace(normalize, '/'))
 }
 
-},{"assert":38,"wayfarer":69}],56:[function(require,module,exports){
+},{"assert":40,"wayfarer":73}],58:[function(require,module,exports){
 var assert = require('assert')
 
 var hasWindow = typeof window !== 'undefined'
@@ -7227,7 +7314,115 @@ NanoScheduler.prototype.setTimeout = function (cb) {
 
 module.exports = createScheduler
 
-},{"assert":38}],57:[function(require,module,exports){
+},{"assert":40}],59:[function(require,module,exports){
+var Nanobus = require('nanobus')
+var assert = require('assert')
+var Parallelstate = require('./parallel-state')
+
+module.exports = Nanostate
+
+function Nanostate (initialState, transitions) {
+  if (!(this instanceof Nanostate)) return new Nanostate(initialState, transitions)
+  assert.equal(typeof initialState, 'string', 'nanostate: initialState should be type string')
+  assert.equal(typeof transitions, 'object', 'nanostate: transitions should be type object')
+
+  this.transitions = transitions
+  this.state = initialState
+  this.submachines = {}
+  this._submachine = null
+
+  Nanobus.call(this)
+}
+
+Nanostate.prototype = Object.create(Nanobus.prototype)
+
+Nanostate.prototype.constructor = Nanostate
+
+Nanostate.prototype.emit = function (eventName) {
+  var nextState = this._next(eventName)
+  assert.ok(nextState, `nanostate.emit: invalid transition ${this.state} -> ${eventName}`)
+
+  if (this._submachine && Object.keys(this.transitions).indexOf(nextState) !== -1) {
+    this._unregister()
+  }
+
+  this.state = nextState
+  Nanobus.prototype.emit.call(this, nextState)
+}
+
+Nanostate.prototype.event = function (eventName, machine) {
+  this.submachines[eventName] = machine
+}
+
+Nanostate.parallel = function (transitions) {
+  return new Parallelstate(transitions)
+}
+
+Nanostate.prototype._unregister = function () {
+  if (this._submachine) {
+    this._submachine._unregister()
+    this._submachine = null
+  }
+}
+
+Nanostate.prototype._next = function (eventName) {
+  if (this._submachine) {
+    var nextState = this._submachine._next(eventName)
+    if (nextState) {
+      return nextState
+    }
+  }
+
+  var submachine = this.submachines[eventName]
+  if (submachine) {
+    this._submachine = submachine
+    return submachine.state
+  }
+
+  return this.transitions[this.state][eventName]
+}
+
+},{"./parallel-state":60,"assert":40,"nanobus":41}],60:[function(require,module,exports){
+var Nanobus = require('nanobus')
+var assert = require('assert')
+
+module.exports = Parallelstate
+
+function Parallelstate (transitions) {
+  assert.equal(typeof transitions, 'object', 'nanostate: transitions should be type object')
+
+  this.scopes = Object.keys(transitions)
+  this.transitions = transitions
+
+  Object.defineProperty(this, 'state', {
+    get: function () {
+      return this.scopes.reduce(function (state, scope) {
+        state[scope] = transitions[scope].state
+        return state
+      }, {})
+    }
+  })
+
+  Nanobus.call(this)
+}
+
+Parallelstate.prototype = Object.create(Nanobus.prototype)
+
+Parallelstate.prototype.emit = function (eventName) {
+  var hasColon = eventName.indexOf(':') >= 0
+  assert.ok(hasColon, `nanostate.emit: invalid transition ${this.state} -> ${eventName}. For parallel nanostate eventName must have a colon ":"`)
+
+  var eventNameSplitted = eventName.split(':')
+  var scope = eventNameSplitted[0]
+  var event = eventNameSplitted[1]
+  assert.ok(scope, `nanostate.emit: invalid scope ${scope} for parallel emitting`)
+
+  this.transitions[scope].emit(event)
+
+  Nanobus.prototype.emit.call(this, eventName)
+}
+
+},{"assert":40,"nanobus":41}],61:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
 
@@ -7277,7 +7472,7 @@ function noop (cb) {
   }
 }
 
-},{"assert":38,"nanoscheduler":56}],58:[function(require,module,exports){
+},{"assert":40,"nanoscheduler":58}],62:[function(require,module,exports){
 /*
 object-assign
 (c) Sindre Sorhus
@@ -7369,7 +7564,7 @@ module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	return to;
 };
 
-},{}],59:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 var assert = require('assert')
 
 module.exports = objectChangeCallsite
@@ -7406,7 +7601,7 @@ function strip (str) {
   return '\n' + arr.join('\n')
 }
 
-},{"assert":6}],60:[function(require,module,exports){
+},{"assert":8}],64:[function(require,module,exports){
 /* global MutationObserver */
 var document = require('global/document')
 var window = require('global/window')
@@ -7510,7 +7705,7 @@ function eachMutation (nodes, fn) {
   }
 }
 
-},{"assert":38,"global/document":32,"global/window":33}],61:[function(require,module,exports){
+},{"assert":40,"global/document":34,"global/window":35}],65:[function(require,module,exports){
 var scheduler = require('nanoscheduler')()
 var assert = require('assert')
 
@@ -7570,7 +7765,7 @@ function onPerformance (cb) {
   }
 }
 
-},{"assert":38,"nanoscheduler":56}],62:[function(require,module,exports){
+},{"assert":40,"nanoscheduler":58}],66:[function(require,module,exports){
 module.exports = plucker
 
 function plucker(path, object) {
@@ -7607,7 +7802,7 @@ function pluck(path) {
   }
 }
 
-},{}],63:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 module.exports = prettierBytes
 
 function prettierBytes (num) {
@@ -7639,7 +7834,7 @@ function prettierBytes (num) {
   }
 }
 
-},{}],64:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -7825,7 +8020,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],65:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 'use strict'
 
 /**
@@ -7854,7 +8049,7 @@ module.exports = function removeItems (arr, startIdx, removeCount) {
   arr.length = len
 }
 
-},{}],66:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 module.exports = scrollToAnchor
 
 function scrollToAnchor (anchor, options) {
@@ -7866,10 +8061,10 @@ function scrollToAnchor (anchor, options) {
   }
 }
 
-},{}],67:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 module.exports = require('insert-css')
 
-},{"insert-css":37}],68:[function(require,module,exports){
+},{"insert-css":39}],72:[function(require,module,exports){
 var fastSafeStringify = require('fast-safe-stringify')
 var copy = require('clipboard-copy')
 
@@ -7886,7 +8081,7 @@ function stateCopy (obj) {
 
 module.exports = stateCopy
 
-},{"clipboard-copy":27,"fast-safe-stringify":31}],69:[function(require,module,exports){
+},{"clipboard-copy":29,"fast-safe-stringify":33}],73:[function(require,module,exports){
 var assert = require('assert')
 var trie = require('./trie')
 
@@ -7965,7 +8160,7 @@ function Wayfarer (dft) {
   }
 }
 
-},{"./trie":70,"assert":6}],70:[function(require,module,exports){
+},{"./trie":74,"assert":8}],74:[function(require,module,exports){
 var mutate = require('xtend/mutable')
 var assert = require('assert')
 var xtend = require('xtend')
@@ -8103,7 +8298,7 @@ Trie.prototype.mount = function (route, trie) {
   }
 }
 
-},{"assert":6,"xtend":71,"xtend/mutable":72}],71:[function(require,module,exports){
+},{"assert":8,"xtend":75,"xtend/mutable":76}],75:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -8124,7 +8319,7 @@ function extend() {
     return target
 }
 
-},{}],72:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -8143,4 +8338,4 @@ function extend(target) {
     return target
 }
 
-},{}]},{},[4]);
+},{}]},{},[6]);
