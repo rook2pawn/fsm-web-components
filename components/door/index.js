@@ -21,6 +21,27 @@ class Component extends Nanocomponent {
       unlocked: { lock: "locked" },
       locked: { unlock: "unlocked" },
     });
+    this.lockAudio = new Audio("components/door/lock.mp3");
+    this.unlockAudio = new Audio("components/door/unlock.mp3");
+    this.openAudio = new Audio("components/door/open.mp3");
+    this.closeAudio = new Audio("components/door/close2.mp3");
+    this.ajarAudio = new Audio("components/door/ajar.mp3");
+    lockState.on("locked", () => {
+      this.lockAudio.play();
+    });
+    lockState.on("unlocked", () => {
+      this.unlockAudio.play();
+    });
+    openState.on("ajar", () => {
+      this.ajarAudio.play();
+    });
+
+    openState.on("open", () => {
+      this.openAudio.play();
+    });
+    openState.on("closed", () => {
+      this.closeAudio.play();
+    });
     openState.guard("open", () => {
       return lockState.state === "unlocked";
     });
@@ -35,8 +56,11 @@ class Component extends Nanocomponent {
   }
 
   createElement({ state, emit }) {
-    return html`<div class="door">
+    const openState = this.fsm.transitions.open.state;
+
+    return html`<div>
       <h4>Door</h4>
+      <div class="door ${openState}"></div>
     </div>`;
   }
 
@@ -46,7 +70,7 @@ class Component extends Nanocomponent {
   }
 
   update() {
-    return false;
+    return true;
   }
 }
 

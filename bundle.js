@@ -56,8 +56,8 @@ module.exports = () => {
           style="display:flex; justify-content:space-between;margin-bottom:20px;"
         >
           <div>
-            ${door.render({ state, emit })}
             ${controls_door.render({ state, emit })}
+            ${door.render({ state, emit })}
           </div>
           ${fsm_door.render({ state, emit })}
         </div>
@@ -78,7 +78,7 @@ const html = require("choo/html");
 const css = 0;
 const nanostate = require("nanostate");
 
-;((require('sheetify/insert')("") || true) && "_d41d8cd9");
+;((require('sheetify/insert')(".door {\n  width: 300px;\n  height: 430px;\n}\n\n.open {\n  background-image: url(components/door/open.jpg);\n}\n.closed {\n  background-image: url(components/door/closed.jpg);\n}\n.ajar {\n  background-image: url(components/door/ajar.jpg);\n}") || true) && "_2bc31ce9");
 
 class Component extends Nanocomponent {
   constructor() {
@@ -96,6 +96,27 @@ class Component extends Nanocomponent {
       unlocked: { lock: "locked" },
       locked: { unlock: "unlocked" },
     });
+    this.lockAudio = new Audio("components/door/lock.mp3");
+    this.unlockAudio = new Audio("components/door/unlock.mp3");
+    this.openAudio = new Audio("components/door/open.mp3");
+    this.closeAudio = new Audio("components/door/close2.mp3");
+    this.ajarAudio = new Audio("components/door/ajar.mp3");
+    lockState.on("locked", () => {
+      this.lockAudio.play();
+    });
+    lockState.on("unlocked", () => {
+      this.unlockAudio.play();
+    });
+    openState.on("ajar", () => {
+      this.ajarAudio.play();
+    });
+
+    openState.on("open", () => {
+      this.openAudio.play();
+    });
+    openState.on("closed", () => {
+      this.closeAudio.play();
+    });
     openState.guard("open", () => {
       return lockState.state === "unlocked";
     });
@@ -110,8 +131,11 @@ class Component extends Nanocomponent {
   }
 
   createElement({ state, emit }) {
-    return html`<div class="door">
+    const openState = this.fsm.transitions.open.state;
+
+    return html`<div>
       <h4>Door</h4>
+      <div class="door ${openState}"></div>
     </div>`;
   }
 
@@ -121,7 +145,7 @@ class Component extends Nanocomponent {
   }
 
   update() {
-    return false;
+    return true;
   }
 }
 

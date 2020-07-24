@@ -55,8 +55,8 @@ module.exports = () => {
           style="display:flex; justify-content:space-between;margin-bottom:20px;"
         >
           <div>
-            ${door.render({ state, emit })}
             ${controls_door.render({ state, emit })}
+            ${door.render({ state, emit })}
           </div>
           ${fsm_door.render({ state, emit })}
         </div>

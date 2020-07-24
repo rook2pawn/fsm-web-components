@@ -1,0 +1,14 @@
+.door {
+  width: 300px;
+  height: 430px;
+}
+
+.open {
+  background-image: url(components/door/open.jpg);
+}
+.closed {
+  background-image: url(components/door/closed.jpg);
+}
+.ajar {
+  background-image: url(components/door/ajar.jpg);
+}
