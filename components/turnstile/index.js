@@ -19,41 +19,11 @@ class Component extends Nanocomponent {
     this.state = {
       push: false,
     };
-    this.emit;
-    this.fsm.on("locked", () => {
-      this.rerender();
-      this.emit("render");
-    });
-    this.fsm.on("unlocked", () => {
-      this.rerender();
-      this.emit("render");
-    });
   }
 
   createElement({ state, emit }) {
-    this.emit = emit;
     return html`<div class="turnstile">
       <h4>Turnstile</h4>
-      <input
-        type="button"
-        value="insert coin"
-        onclick=${() => {
-          this.fsm.emit("coin");
-        }}
-      />
-      <input
-        type="button"
-        value="push"
-        onclick=${() => {
-          this.state.push = true;
-          this.rerender();
-          setTimeout(() => {
-            this.state.push = false;
-            this.fsm.emit("push");
-          }, 2000);
-        }}
-      />
-      <div>${this.state.push ? "Pushing" : this.fsm.state}</div>
     </div>`;
   }
 

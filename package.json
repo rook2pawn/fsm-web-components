@@ -9,7 +9,7 @@
     "http-server": "^0.11.1",
     "nanocomponent": "^6.5.2",
     "nanohtml": "^1.4.0",
-    "nanostate": "^1.2.1",
+    "nanostate": "rook2pawn/nanostate",
     "sheetify": "^7.3.3",
     "watchify": "^3.11.1"
   },

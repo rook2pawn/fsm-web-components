@@ -1,6 +1,8 @@
 const Nanocomponent = require("nanocomponent");
 const html = require("choo/html");
 const css = require("sheetify");
+const nanostate = require("nanostate");
+
 css("./component.css");
 
 class Component extends Nanocomponent {
