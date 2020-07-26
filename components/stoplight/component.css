@@ -1,0 +1,94 @@
+div.stoplightContainer {
+  position: relative;
+}
+
+div.stoplight {
+  position: relative;
+  background-image: url(components/stoplight/stoplight_small.png);
+  width: 120px;
+  height: 141px;
+  z-index: 0;
+}
+div.stoplightContainer .light {
+  transition: background 0.5s;
+  position: absolute;
+  left: 42px;
+  width: 34px;
+  height: 36px;
+  background-color: black;
+}
+div.stoplightContainer .red {
+  top: 15px;
+}
+div.stoplightContainer .yellow {
+  top: 55px;
+}
+div.stoplightContainer .green {
+  top: 100px;
+}
+div.stoplightContainer .light.red.active {
+  background-color: red;
+}
+div.stoplightContainer .light.red.flashing {
+  background-color: red;
+}
+
+div.stoplightContainer .light.yellow.active {
+  background-color: yellow;
+}
+div.stoplightContainer .light.green.active {
+  background-color: green;
+}
+div.blackBacking {
+  position: absolute;
+  background-color: black;
+  width: 34px;
+  height: 120px;
+  left: 42px;
+  top: 14px;
+  border: thin solid green;
+}
+div.glare {
+  opacity: 0;
+  transition: opacity 0.65s;
+  z-index: 1;
+  background-repeat: no-repeat;
+  position: absolute;
+  width: 120px;
+  height: 44px;
+  background-image: url(components/stoplight/lights_small.png);
+  background-position-y: 0px;
+  background-position-x: 0px;
+}
+div.glare.red {
+  background-position-x: -5px;
+  background-position-y: -134px;
+}
+div.glare.yellow {
+  background-position-y: -240px;
+}
+
+div.glare.green {
+  background-position-y: -300px;
+  background-position-x: -6px;
+}
+
+div.active.glare {
+  opacity: 0.75;
+}
+
+div.flashing {
+  animation-name: flashing;
+  animation-duration: 0.75s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@keyframes flashing {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

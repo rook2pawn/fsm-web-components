@@ -13,25 +13,29 @@ class Component extends Nanocomponent {
     this.fsm = machine.fsm;
   }
   renderFSM(fsm) {
-    const state = fsm.state;
-    const list = Object.keys(fsm.transitions[state]);
-    return html`<div class="fsmControls">
-      ${list.map((controlName) => {
-        return html`<input
-          value="${controlName}"
-          type="button"
-          onclick=${() => {
-            fsm.emit(controlName);
-            this.emit("render");
-          }}
-        />`;
-      })}
+    return html`<div class="fsm">
+      <div class="currentState">
+        currentState ${fsm && fsm.state}
+      </div>
+      <div class="states">
+        ${Object.keys(fsm.transitions).map((key) => {
+          return html`<div>
+            <span class="key ${key === fsm.state ? "active" : ""}">${key}</span
+            ><span class="value">${JSON.stringify(fsm.transitions[key])}</span>
+          </div>`;
+        })}
+      </div>
     </div>`;
   }
   createElement({ state, emit }) {
-    this.emit = emit;
+    console.log(this.fsm);
+    console.log("FSM_STATE :", this.fsm.state);
+
     switch (typeof this.fsm.state) {
       case "string":
+        if (this.fsm.transitions[this.fsm.state] !== undefined) {
+          console.log("OHH");
+        }
         return this.renderFSM(this.fsm);
         break;
       case "object":

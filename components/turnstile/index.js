@@ -22,9 +22,7 @@ class Component extends Nanocomponent {
   }
 
   createElement({ state, emit }) {
-    return html`<div class="turnstile">
-      <h4>Turnstile</h4>
-    </div>`;
+    return html`<div class="turnstile"></div>`;
   }
 
   load(el) {

@@ -58,10 +58,7 @@ class Component extends Nanocomponent {
   createElement({ state, emit }) {
     const openState = this.fsm.transitions.open.state;
 
-    return html`<div>
-      <h4>Door</h4>
-      <div class="door ${openState}"></div>
-    </div>`;
+    return html`<div class="door ${openState}"></div>`;
   }
 
   load(el) {

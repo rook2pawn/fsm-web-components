@@ -6,6 +6,7 @@
     "browserify": "^16.2.3",
     "choo": "^6.13.1",
     "choo-devtools": "^3.0.4",
+    "es6-dynamic-template": "^2.0.0",
     "http-server": "^0.11.1",
     "nanocomponent": "^6.5.2",
     "nanohtml": "^1.4.0",
@@ -15,10 +16,14 @@
   },
   "scripts": {
     "start": "http-server -o -c-1 -p 8080 ",
-    "build": "watchify -v -g sheetify index.js -o bundle.js",
+    "index": "perlpp app-pre.js -o app.js",
+    "build": "npm run index && watchify -v -g sheetify index.js -o bundle.js",
     "browser": "npm run build && npm run start"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "preprocess": ""
+  }
 }
